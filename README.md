@@ -1,3 +1,2 @@
 # log-ioc
-python log analysis
-test
+Python Log Analysis
