@@ -30,7 +30,7 @@ class logIoc(object):
         self.es_index= config.get('logIoc', 'es_index')
         self.logioc_index= config.get('logIoc', 'management_index')
         self.query_list = queries
-        self.es= Elasticsearch([self.es_host], port=9200)
+        self.es= Elasticsearch([self.es_host], port=self.es_port)
         
     def check_index_existance(self, index):
         if self.es.indices.exists(index):
@@ -76,7 +76,7 @@ class logIoc(object):
         print(" response: '%s'" % (res))
     
     def get_hits(self):
-        newHits = self.es.search(index="winlogbeat-windows-hosts-*", body={
+        newHits = self.es.search(index=self.es_index, body={
     "from" : 0, "size" :10000 ,
     "query": {
     "bool": {
