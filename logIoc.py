@@ -24,7 +24,9 @@ class logIoc(object):
         	config.read(os.getcwd()+'/configs/logIoc.ini')
         	queries = []
         	for line in (os.listdir(os.getcwd()+'/queries/')):
-        		queries.append(line)
+        		if line.split('.')[1]=="py":
+				if line.split('.')[0] != "__init__":
+					queries.append(line)
         	self.ini_sections= config.sections()
         	self.es_host= config.get('logIoc', 'es_host')
         	self.es_port= config.get('logIoc', 'es_port')
@@ -32,7 +34,8 @@ class logIoc(object):
         	self.logioc_index= config.get('logIoc', 'management_index')
         	self.query_list = queries
 		self.es= Elasticsearch([self.es_host], port=self.es_port)
-		self.cycler_initialize()
+		#self.cycler_initialize()
+		self.init_done = False
         
 	def check_index_existance(self, index):
         	print "in check_index_existance"
@@ -81,7 +84,11 @@ class logIoc(object):
         	})
         	#print(" response: '%s'" % (res))
     
-    	def get_hits(self):
+    	def bulk_index(self, index_name, dict_list):
+		res = self.es.bulk(index = index_name, body = dict_list, refresh = True)
+		return
+
+	def get_hits(self):
 		print "in get hits"
 		newHits = self.es.search(index=self.es_index, body={
     		"from" : 0, "size" :10000 ,
@@ -107,21 +114,23 @@ class logIoc(object):
             		print "cycler initialization completed already" 
 
 
-   	def cycler_eng(self): 
-		print "in cycler eng"
-		sys.path.append(os.getcwd()+'/queries/')
-        	self.cycler_initialize()
+   	def cycler_eng(self):
+		cycle_start = self.get_epoch_now()
+		if self.init_done == False:
+        		self.cycler_initialize()
+			self.init_done = True
         	hits = self.get_hits()
 		self.update_last_run()
 		if len(hits) == 0:
 			print "last run time="+str(self.get_last_run())
 			print "no logs captured since last run time, pausing until next window"
         	if len(hits) != 0:
-			#print str(len(hits)) + " events noticed for this cycle"
-			for line in self.query_list[:-1]:
-            			print line.split('.')[0]
+			for line in self.query_list:
 	            		line = line.split('.')[0]
         	    		line_query =__import__(line)
             			line_query.main(hits)
-		time.sleep(20)
-		self.cycler_eng()
+		cycle_finish = self.get_epoch_now()
+		cycle_duration = (cycle_finish - cycle_start)*.001
+		print cycle_duration
+		time.sleep(20-cycle_duration)
+		self.cycler_eng() 
