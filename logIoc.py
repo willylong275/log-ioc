@@ -1,4 +1,3 @@
-
 try:
 	import sys
 	import time
@@ -112,9 +111,35 @@ class logIoc(object):
             		time.sleep(10)
         	else:
             		print "cycler initialization completed already" 
+	
+	def query_waiter_loop(self, query_name):
+		#subprocess 
+		#get configed wait time 
+		#get hits ...have work to do there
+		#spawn query_name(hits)
+		#wait time
+	
+	def query_proc_start(self):
+		sys.path.append(os.getcwd()+'/queries/')
+		from multiprocessing import Process 
+		#jobs = []
+		#for line in self.query_list:
+                #                line = line.split('.')[0]
+                #                line_query =__import__(line)
 
+		query = __import__('test_query')
+		hits = self.get_hits()
+		p=Process(target = query.main(hits),)
+		p.start()
+		p.join()
+		print "in function"
+		#def f(name):
+		#	print 'hello', name
+		#p = Process(target=f, args=('bob',))
+		#p.start()
+		#p.join()
 
-   	def cycler_eng(self):
+   	def batch_cycler(self):
 		cycle_start = self.get_epoch_now()
 		if self.init_done == False:
         		self.cycler_initialize()
