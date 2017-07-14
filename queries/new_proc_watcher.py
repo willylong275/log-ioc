@@ -11,10 +11,13 @@ def main(hits):
 			id1_hits.append(line.copy())
 	for line in id1_hits:
 		hashes = line.get('_source', {}).get('event_data', {}).get('Hashes')
-		print hashes			
+		print hashes
+		line['_type']= 'running-procs'
+		line['_index'] = 'logioc-management'
+					
 	if len(id1_hits) != 0:
 		print id1_hits[0]
-		lio.bulk_index("test-index", id1_hits)
+		lio.bulk_index("logioc-management", id1_hits)
 	print ("from all hits "+ str(len(id1_hits)) + " were event id 1")
 	hits = []
 	#lio=logIoc()

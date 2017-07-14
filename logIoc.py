@@ -85,7 +85,7 @@ class logIoc(object):
         	#print(" response: '%s'" % (res))
     
     	def bulk_index(self, index_name, dict_list):
-		res = self.es.bulk(index = index_name, body = dict_list, refresh = True)
+		res = helpers.bulk( self.es, dict_list)
 		return
 
 	def get_hits(self):
