@@ -84,7 +84,7 @@ class logIoc(object):
 		print "update last run"
         	res=self.es.index(index=self.logioc_index, doc_type='cycler', id=1, body={
         	'Script': 'Cycler Main',
-        	'last_run_time': self.get_utc_now(),
+        	'last_run_time': self.get_epoch_now(),
         	})
         	#print(" response: '%s'" % (res))
     
@@ -94,16 +94,18 @@ class logIoc(object):
 
 	def get_hits(self):
 		print "in get hits"
-		newHits = self.es.search(index=self.es_index, body={
-    		"from" : 0, "size" :10000 ,
-    		"query": {
-    		"bool": {
-            	"filter": {"range": {  "@timestamp": {"gte":self.get_last_run(), "lte": self.get_utc_now()}}}
-        	}
-    		}
-		})
-        	print "found " +str(len(newHits['hits']['hits']))+" records that match criteria"
-        	newHits = newHits['hits']['hits']
+        	time_filter_query={ "query":{"bool": { "filter": {"range": {"@timestamp": {
+											"gte": int(self.get_last_run()),
+                                                                       			"lte": int(self.get_epoch_now()),
+                                                                       			"format":"epoch_millis"
+                                                                          		}}}}}}
+		scan_generator=helpers.scan(self.es, query=time_filter_query, index=self.es_index,)
+		newHits=[]
+		for item in scan_generator:
+    			newHits.append(item)
+		#len(listy)
+		print "found " +str(len(newHits))+" records that match criteria"
+        	#newHits = ['hits']['hits']
         	return newHits
     
    	def cycler_initialize(self):
@@ -126,12 +128,13 @@ class logIoc(object):
 	
 	def query_proc_start(self):
 		sys.path.append(os.getcwd()+'/queries/')
-		#jobs = []
-		#for line in self.query_list:
-                #                line = line.split('.')[0]
-                #                line_query =__import__(line)
-
-		query = __import__('test_query')
+		jobs = []
+		for line in self.query_list:
+                                line = line.split('.')[0]
+                                line_query =__import__(line)
+				wait = self.config.get('query_window', line)
+				print wait
+		#query = __import__('test_query')
 		hits = self.get_hits()
 		p=Process(target = query.main(hits),)
 		p.start()
