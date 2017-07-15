@@ -6,22 +6,25 @@ try:
 	import ConfigParser
 	from datetime import datetime
     	from elasticsearch import Elasticsearch, helpers
+	from multiprocessing import Process
 except:
 	print("Please make sure you have required modules installed. pip -r requirements.txt or pip install elasticsearch")
 
 class logIoc(object):
 	config = ConfigParser.RawConfigParser()	
 	config.read(os.getcwd()+'/configs/logIoc.ini')
-    	print config.items('logIoc')[0][1]
-    	queries = []
 	sys.path.append(os.getcwd()+'/queries/')
-    	for line in (os.listdir(os.getcwd()+'/queries/')):
-        	queries.append(line)
+        sys.path.append(os.getcwd()+'/batch_queries/')
 
 	def __init__(self):
         	config = ConfigParser.RawConfigParser()
+		batch_queries = []
         	config.read(os.getcwd()+'/configs/logIoc.ini')
-        	queries = []
+        	for line in (os.listdir(os.getcwd()+'/batch_queries/')):
+                        if line.split('.')[1]=="py":
+                                if line.split('.')[0] != "__init__":
+                                        batch_queries.append(line)
+		queries = []
         	for line in (os.listdir(os.getcwd()+'/queries/')):
         		if line.split('.')[1]=="py":
 				if line.split('.')[0] != "__init__":
@@ -31,7 +34,9 @@ class logIoc(object):
         	self.es_port= config.get('logIoc', 'es_port')
         	self.es_index= config.get('logIoc', 'es_index')
         	self.logioc_index= config.get('logIoc', 'management_index')
-        	self.query_list = queries
+        	self.batch_window= config.get('batch_cycler', 'batch_window')
+		self.query_list = queries
+		self.batch_query_list = batch_queries
 		self.es= Elasticsearch([self.es_host], port=self.es_port)
 		#self.cycler_initialize()
 		self.init_done = False
@@ -112,7 +117,7 @@ class logIoc(object):
         	else:
             		print "cycler initialization completed already" 
 	
-	def query_waiter_loop(self, query_name):
+	#def query_waiter_loop(self, query_name):
 		#subprocess 
 		#get configed wait time 
 		#get hits ...have work to do there
@@ -121,7 +126,6 @@ class logIoc(object):
 	
 	def query_proc_start(self):
 		sys.path.append(os.getcwd()+'/queries/')
-		from multiprocessing import Process 
 		#jobs = []
 		#for line in self.query_list:
                 #                line = line.split('.')[0]
@@ -150,12 +154,12 @@ class logIoc(object):
 			print "last run time="+str(self.get_last_run())
 			print "no logs captured since last run time, pausing until next window"
         	if len(hits) != 0:
-			for line in self.query_list:
+			for line in self.batch_query_list:
 	            		line = line.split('.')[0]
         	    		line_query =__import__(line)
             			line_query.main(hits)
 		cycle_finish = self.get_epoch_now()
 		cycle_duration = (cycle_finish - cycle_start)*.001
 		print cycle_duration
-		time.sleep(20-cycle_duration)
-		self.cycler_eng() 
+		time.sleep(int(self.batch_window)-cycle_duration)
+		self.batch_cycler() 
