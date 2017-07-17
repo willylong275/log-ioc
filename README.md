@@ -1,4 +1,4 @@
-Welcome to logIoc, this is definitely a wook in progress!
+Welcome to logIoc, this is definitely a work in progress!
 
 Essentially logIoc has one purpose, to provide a simple way to repeatedly query elasticsearch and return a list of dictionarys as results to each query.
 
