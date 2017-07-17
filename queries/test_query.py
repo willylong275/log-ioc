@@ -2,4 +2,3 @@
 
 def main(hits):
 	print "hello world"
-	print hits[0]
