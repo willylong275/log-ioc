@@ -1,7 +1,6 @@
 try:
 	import sys
 	import time
-	import warnings
 	import os
 	import ConfigParser
 	from datetime import datetime
@@ -43,22 +42,20 @@ class logIoc(object):
 		self.init_done = False
         
 	def check_index_existance(self, index):
-        	print "in check_index_existance"
 		if self.es.indices.exists(index):
              		return(True)
         	else:
             		return(False)
     
 	def create_index(self, index):
-		print "in create index"
         	request_body = {
         	"settings" : {
             	"number_of_replicas": 0
                 	}
         	}	
-        	print("creating '%s' index..." % (index))
+        	#print("creating '%s' index..." % (index))
         	res = self.es.indices.create(index = index, body = request_body)
-        	print(" response: '%s'" % (res))
+        	#print(" response: '%s'" % (res))
     
 	def get_utc_now(self):
         	utc_now = datetime.utcnow().isoformat()[:-3]+'Z'
@@ -69,11 +66,11 @@ class logIoc(object):
         	return epoch_now
     
 	def get_last_run(self, script_name):
-		print "in get last run"
-		#if self.check_index_existance(self.logioc_index) == False:
-            		#self.create_index(self.logioc_index)
-        	#else:
-            	res = self.es.search(index=self.logioc_index, doc_type=script_name+"-time-record", body={'query': {'match': {'Script':script_name}}})
+		#print "in get last run"
+		if self.check_index_existance(self.logioc_index) == False:
+            		self.create_index(self.logioc_index)
+        	else:
+            		res = self.es.search(index=self.logioc_index, doc_type=script_name+"-time-record", body={'query': {'match': {'Script':script_name}}})
             	if res['hits']['total'] == 0:
                 	print 'no time record for '+script_name+' existed'
                 	return False
@@ -82,19 +79,22 @@ class logIoc(object):
 			return last_run      
     
 	def update_last_run(self, script_name):
-		print "update last run"
+		print ("last run updated for"+script_name)
         	res=self.es.index(index=self.logioc_index, doc_type=script_name+"-time-record", id=1, body={
         	'Script': script_name,
         	'last_run_time': self.get_epoch_now(),
         	})
-        	print(" response: '%s'" % (res))
+        	#print(" response: '%s'" % (res))
     
     	def bulk_index(self, index_name, dict_list):
 		res = helpers.bulk( self.es, dict_list)
+		print(" response: '%s'" % (str(res)))
+		print res
+		print str(res)
 		return
 
 	def get_hits(self, script_name):
-		print "in get hits"
+		#print "in get hits"
         	time_filter_query={ "query":{"bool": { "filter": {"range": {"@timestamp": {
 											"gte": int(self.get_last_run(script_name)),
                                                                        			"lte": int(self.get_epoch_now()),
@@ -105,12 +105,12 @@ class logIoc(object):
 		for item in scan_generator:
     			newHits.append(item)
 		#len(listy)
-		print "found " +str(len(newHits))+" records that match criteria"
+		print ("found " +str(len(newHits))+" records that match criteria andsending them to "+script_name)
         	#newHits = ['hits']['hits']
         	return newHits
     
    	def cycler_initialize(self):
-		print "in cyler initialize"
+		#print "in cyler initialize"
    		if self.check_index_existance(self.logioc_index)== False:
             		print "management index existance returned false"
 			self.create_index(self.logioc_index)
@@ -178,7 +178,7 @@ class logIoc(object):
         	hits = self.get_hits('batch-cycler')
 		self.update_last_run('batch-cycler')
 		if len(hits) == 0:
-			print "last run time="+str(self.get_last_run(batch_cycler))
+			print "last run time="+str(self.get_last_run("batch_cycler"))
 			print "no logs captured since last run time, pausing until next window"
         	if len(hits) != 0:
 			for line in self.batch_query_list:
