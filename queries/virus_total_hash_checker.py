@@ -16,7 +16,7 @@ def main(hits):
 
 		for list_line in range(1,5):
     			got_hash = unchecked_hashes[list_line].split(',')[0].split('=')[1]
-    			param = {'resource':got_hash, lio.api_key:api}
+    			param = {'resource':got_hash, 'apikey': lio.api_key}
     			url = base + "file/report"
     			data = urllib.urlencode(param)
     			result = urllib2.urlopen(url,data)
