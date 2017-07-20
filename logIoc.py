@@ -35,6 +35,7 @@ class logIoc(object):
         	self.es_index= config.get('logIoc', 'es_index')
         	self.logioc_index= config.get('logIoc', 'management_index')
         	self.batch_window= config.get('batch_cycler', 'batch_window')
+		self.api_key= config.get('virus_total', 'api_key')
 		self.query_list = queries
 		self.batch_query_list = batch_queries
 		self.es= Elasticsearch([self.es_host], port=self.es_port)
