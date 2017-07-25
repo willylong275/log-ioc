@@ -1,18 +1,14 @@
 Welcome to logIoc, this is definitely a work in progress!
 
-Essentially logIoc has one purpose, to provide a simple way to repeatedly query elasticsearch and return a list of dictionaries as results to each query.
+Essentially logIoc has one purpose, to provide a simple way to interact with logs in elasticsearch and provide an easy modular way to add "questions of the network" in the form of query scripts.
 
-The class has two modes of operation, batch queries and individual queries. Both can be run at once with run-all.sh
+Of note: this class will build and use a new index in your es instance for management. The name of this index is configured in configs/logIoc.ini
 
-The batch query function will gather all records from it's last run time and present them as a list of hits to all queries in the batch_queries directory.
-The time cycle for the batch query loop is configured in configs/logIoc.ini
+The class build and maintains a moving window of logs in a pandas dataframe. This dataframe is accessible for any query added to the queries dir. If an IOC is identified within log messages the class provides the "log_alert" method to add an alert record to your ES instance.#under construction
 
-The individual query functionality comes from a saeparate method. This gives the analyst the abillity to specify an amount of time to pass between gathering all records. These records again are presented to that query as a list of hits. The individual query method will get all queries in the /queries dir and then look for the analyst time cycle to be configured for each query in /queries. 
+The width of the window in time is configured in configs/logIoc.ini as well as the wait period before the window walks to "now".
 
-Currently all wait configs in logIoc.ini are in seconds.
-
-Also untill fixed when using the individual queries functionality, a thread continues to run for each query after hitting control+c. Control+z then killall python will stop all threads.
+Also configured in logIoc.ini is the cycle rate for all queries in the queries dir. Queries can be configured to run at any interval. Utilizing the "update_last_timestamp" method each query will never analyze the same log message twice. An example query will be in the queries dir in the near future.
 
 End state, focus on parsing list of results for indicators of compromise in logs and let logIoc handle elasticsearch.
 
-If indicators from your queries are found, a future method will index a "log-alert" into your es instance. 

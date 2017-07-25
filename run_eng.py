@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-
 from multiprocessing import Process
-from logIoc import logIoc
+import logIoc 
 from threading import Thread
 import multiprocessing
 import subprocess
-
-lio=logIoc()
-lio.query_proc_start()
+x=logIoc.logIoc()
+x.eng()
 #xlio=logIoc()
 #processes=[]
 #p=Process(target = lio.query_proc_start(),)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-def main(hits):
+def main(df_hits, lock):
 	from logIoc import logIoc
 	lio=logIoc()
 	import urllib, urllib2, os, json, time
@@ -23,8 +23,14 @@ def main(hits):
     			jdata =  json.loads(result.read())
     			if jdata['positives']==0:
         			result_line = str(str(unchecked_hashes[list_line])+", Response_code: "+ str(jdata["response_code"])+","+" positives: "+str(jdata["positives"])+'/'+str(jdata["total"]))
-        			print (result_line)
+        			#print (result_line)
         			results_list.append(result_line)
+                        elif jdata['positives']>=1:
+                                result_line = str(str(unchecked_hashes[list_line])+", Response_code: "+ str(jdata["response_code"])+","+" positives: "+str(jdata["positives"])+'/'+str(jdata["total"]))
+                                print "WARNING HASH CHECK FOUND POSITIVE IN VIRUS TOTAL RESULTS"
+				print (result_line)
+				
+                                results_list.append(result_line)
     			else:
         			print (jdata)
 		del unchecked_hashes[1:5]
