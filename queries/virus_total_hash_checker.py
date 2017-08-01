@@ -12,7 +12,16 @@ def main(df_hits, lock):
 		results_list=[]
 		checked_hashes = [line.rstrip('\n') for line in file2]
 		base = 'https://www.virustotal.com/vtapi/v2/'
-		got_hash = unchecked_hashes[0].split(',')[0].split('=')[1]
+		if unchecked_hashes[0].split(',')[0]=="nan" :
+			del unchecked_hashes[0]
+			file1=open(os.path.abspath('docs/unchecked-hashes'),"w")
+			for line in unchecked_hashes:
+                        	file1.write("%s\n" % line)
+			file1.close()
+			exit()
+		else:
+			got_hash = unchecked_hashes[0].split(',')[0].split('=')[1]
+			
 		param = {'resource':got_hash, 'apikey': lio.api_key}
 		url = base + "file/report"
 		data = urllib.urlencode(param)
