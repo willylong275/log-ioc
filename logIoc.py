@@ -14,21 +14,15 @@ try:
         import threading
 except:
         print("Please make sure you have required modules installed. pip -r requirements.txt or pip install elasticsearch")
-
+	exit()
 class logIoc(object):
         config = ConfigParser.RawConfigParser()
         config.read(os.getcwd()+'/configs/logIoc.ini')
         sys.path.append(os.getcwd()+'/queries/')
-        sys.path.append(os.getcwd()+'/batch_queries/')
 
         def __init__(self):
                 config = ConfigParser.RawConfigParser()
-                batch_queries = []
                 config.read(os.getcwd()+'/configs/logIoc.ini')
-                for line in (os.listdir(os.getcwd()+'/batch_queries/')):
-                        if line.split('.')[1]=="py":
-                                if line.split('.')[0] != "__init__":
-                                        batch_queries.append(line)
                 queries = []
                 for line in (os.listdir(os.getcwd()+'/queries/')):
                         if line.split('.')[1]=="py":
@@ -41,12 +35,9 @@ class logIoc(object):
                 self.logioc_index= config.get('logIoc', 'management_index')
                 self.window_walk= config.get('logIoc', 'window_walk')
                 self.sliding_window= config.get('logIoc', 'sliding_window')
-                self.batch_window= config.get('batch_cycler', 'batch_window')
                 self.api_key= config.get('virus_total', 'api_key')
                 self.query_list = queries
-                self.batch_query_list = batch_queries
                 self.es= Elasticsearch([self.es_host], port=self.es_port)
-                #self.cycler_initialize()
                 self.init_done = False
 		self.lock=threading.Lock()		
 
@@ -83,7 +74,6 @@ class logIoc(object):
                 return epoch_now
 
         def get_last_run(self, script_name):
-                #print "in get last run"
                 if self.check_index_existance(self.logioc_index) == False:
                         self.create_index(self.logioc_index)
                 else:
@@ -104,7 +94,6 @@ class logIoc(object):
                 #print(" response: '%s'" % (res))
 	
 	def get_last_timestamp(self, script_name):
-                #print "in get last run"
         	if self.check_index_existance(self.logioc_index) == False:
                         self.create_index(self.logioc_index)
                 else:
@@ -143,17 +132,10 @@ class logIoc(object):
                         utc_record=item['_source']['@timestamp'][:-1]
                         new_value=calendar.timegm(datetime.strptime(utc_record, "%Y-%m-%dT%H:%M:%S.%f").timetuple())*1000
                         item['@timestamp']=new_value
-                        #item['fields']['@timestamp']=new_value
                         newHits.append(item)
-                #len(listy)
-                #print "printing new hits"
-                #print newHits[0]
-                #print ("found " +str(len(newHits))+" records that match criteria and sending them to cycle")
-                #newHits = ['hits']['hits']
                 return newHits
 
         def cycler_initialize(self):
-        #print "in cyler initialize"
             if self.check_index_existance(self.logioc_index)== False:
                 print "management index existance returned false"
                 print "creating it now..."
@@ -182,8 +164,6 @@ class logIoc(object):
                 print ("error initializing time window....exiting")
                 exit()
             window_walk=int(self.window_walk[:-1])
-            #print (self.sliding_window)
-            #print (window_start)
             #print (str(int(self.get_epoch_now()-window_start())))
             hits = self.flatten_dict(self.get_hits(window_start, self.get_epoch_now()))
             return(hits)
@@ -208,10 +188,10 @@ class logIoc(object):
         def subprocess_holder_loop(self, subquery):
                 x=__import__(subquery)
                 wait = self.config.get('query_window', subquery)
-                print ("starting thread to start execute then wait loop for  "+subquery)
-                #sub_proc_query=Process(target = self.batch_cycler(),)
+                print ("\nstarting thread to start execute then wait loop for  "+subquery)
                 while True:
                         hits=[]
+			print ("\nstarting execution of "+subquery)
                         sub_proc_query=Process(target = x.main(df_hits, self.lock),)
                         self.update_last_run(subquery)
                         time.sleep(int(wait))
@@ -226,14 +206,9 @@ class logIoc(object):
                 for line in self.query_list:
 
                                 subquery = line.split('.')[0]
-                                #g=Process(target = self.subprocess_holder_loop(),args=(subquery,)).start()
-                                #g.start()
-                                #subquery.join()
-                                #thread = Thread()
                                 thread=threading.Thread(target=self.subprocess_holder_loop, args=(subquery,))
                                 thread.daemon=True
                                 thread.start()
-                                #self.subprocess_holder_loop(thread, subquery)
                                 print ("subquery was "+ subquery)
                 while True:
                         time.sleep(1)
@@ -245,20 +220,17 @@ class logIoc(object):
                     init_time_start=self.get_epoch_now()
                     hits=self.cycler_initialize()
                     global df_hits
-		    #self.lock.acquire()
+		    self.lock.acquire()
                     df_hits = pd.DataFrame(hits).sort_values('@timestamp')
 		    print ("Window Initialization ElasticSearch query returned "+str(len(df_hits))+" records for the entire configured window")
-		    #self.lock.release()
+		    self.lock.release()
                     del hits
                     print ("initialization time took "+str((self.get_epoch_now()-init_time_start)/1000)+" seconds")
                     eng_now=self.get_epoch_now()
-                    #display(df_hits.iloc[(len(df_hits)-1)])
-                    #time.sleep(int(lio.window_walk[:-1]))
                     sys.path.append(os.getcwd()+'/queries/')
-                    #start_queries=Process(target = lio.query_proc_start(),)
-                    thready=threading.Thread(target=self.query_proc_start, args=())
-                    thready.daemon=True
-                    thready.start()
+                    query_thread=threading.Thread(target=self.query_proc_start, args=())
+                    query_thread.daemon=True
+                    query_thread.start()
 		    time.sleep(10)
 
                 print ("window has walked forward "+str(self.window_walk[:-1])+" seconds")
@@ -267,15 +239,12 @@ class logIoc(object):
                 hits_update=self.flatten_dict(self.get_hits(then, eng_now))
                 if len(hits_update)!= 0:
                     df_hits_update = pd.DataFrame(hits_update)
-                    #print "length of new dataframe for merging"
-                   # print len(df_hits_update)
 		    self.lock.acquire()
                     df_hits = pd.concat([df_hits, df_hits_update], ignore_index=True)
 		    self.lock.release()
                     del df_hits_update
                     df_hits.sort_values('@timestamp')
                     print("cyle has recieved new records and will remove old records from window")
-                    #get the time stamp when all older records should be deleted
                 window_cutoff = eng_now-int(self.window_interval)
                 before_cutoff = len(df_hits)
 		self.lock.acquire()
@@ -284,8 +253,7 @@ class logIoc(object):
 		after_cutoff= len(df_hits)
 		
                 print("cyle has recieved "+ str(len(hits_update))+" new records and will remove "+str(before_cutoff-after_cutoff)+" old records from window")      
-                print("cycle number: "+ str(cycle_num)+" complete, now waiting before window walks" )
+                print("cycle number: "+ str(cycle_num)+" complete, now waiting before window walks\n" )
                 cycle_num+= 1  
-                #print("cycle number: "+ str(cycle_num))
                 time.sleep(int(self.window_walk[:-1]))
 
