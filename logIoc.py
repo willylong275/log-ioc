@@ -8,7 +8,8 @@ try:
         import flatdict
         import calendar
         import pandas as pd
-        from datetime import datetime
+        #from datetime import datetime
+        import datetime
         from elasticsearch import Elasticsearch, helpers
         from multiprocessing import Process
         import threading
@@ -41,14 +42,17 @@ class logIoc(object):
                 self.init_done = False
 		self.lock=threading.Lock()		
 
-	def log_alert(self, offending_id, message):
+	def log_alert(self, offending_id, message, severity, host):
 		print ("log alert added to elasticsearch")
-                res=self.es.index(index="logstash-windows-hosts-2017.07.25" , doc_type="log-alert",  body={
-                'Message': message,
-                'Offending_Log_id:': offending_id,
-                })
+		today=datetime.date.today().strftime('%Y.%m.%d')
+		alert_json={ "timestamp": self.get_utc_now(),"severity":severity, "host":host,"message":message,"offending_id":offending_id}
+                res=self.es.index(index=str("logstash-log-alert-"+today) , doc_type="log-alert",  body=alert_json)
                 print(" response: '%s'" % (res))
-
+		alert_file=open("log-alerts.json","a+")
+		#alert_file.write('{"timestamp": {0}, "beat_name": "log-alert", "message": {1}, "offending_id": {2}}\n'.format(self.get_utc_now(), message, offending_id))
+		#alert_file.write("\n")
+		alert_file.write("{ \"timestamp\":\"" + self.get_utc_now()+"\",\"severity\":\"" + severity + "\",\"host\":\""+host+"\",\"message\":\"" + message + "\",\"offending_id\":\"" + offending_id + "\"}" + "\n")
+		alert_file.close()
         
 	def check_index_existance(self, index):
                 if self.es.indices.exists(index):
@@ -66,7 +70,7 @@ class logIoc(object):
                 #print(" response: '%s'" % (res))
 
         def get_utc_now(self):
-                utc_now = datetime.utcnow().isoformat()[:-3]+'Z'
+                utc_now = datetime.datetime.utcnow().isoformat()[:-3]+'Z'
                 return utc_now
 
         def get_epoch_now(self):
@@ -86,7 +90,7 @@ class logIoc(object):
                         return last_run
 
         def update_last_timestamp(self, script_name, last_timestamp):
-                print ("last timestamp updated for "+script_name)
+                print ("last timestamp updated for  "+script_name)
                 res=self.es.index(index=self.logioc_index, doc_type=script_name+"-last-timestamp", id=1, body={
                 'Script': script_name,
                 'last_timestamp_saw': last_timestamp,
@@ -106,7 +110,7 @@ class logIoc(object):
                         return last_timestamp
 
         def update_last_run(self, script_name):
-                print ("last run updated for"+script_name)
+                print ("last run updated for "+script_name)
                 res=self.es.index(index=self.logioc_index, doc_type=script_name+"-time-record", id=1, body={
                 'Script': script_name,
                 'last_run_time': self.get_epoch_now(),
@@ -130,7 +134,7 @@ class logIoc(object):
                 newHits=[]
                 for item in scan_generator:
                         utc_record=item['_source']['@timestamp'][:-1]
-                        new_value=calendar.timegm(datetime.strptime(utc_record, "%Y-%m-%dT%H:%M:%S.%f").timetuple())*1000
+                        new_value=calendar.timegm(datetime.datetime.strptime(utc_record, "%Y-%m-%dT%H:%M:%S.%f").timetuple())*1000
                         item['@timestamp']=new_value
                         newHits.append(item)
                 return newHits
@@ -139,8 +143,13 @@ class logIoc(object):
             if self.check_index_existance(self.logioc_index)== False:
                 print "management index existance returned false"
                 print "creating it now..."
-                lio.create_index(lio.logioc_index)
-            if self.get_last_run('batch-cycler') == False:
+                self.create_index(self.logioc_index)
+
+            if self.check_index_existance('logstash-log-alert-2017.08.02')== False:
+                print "management index existance returned false"
+                self.log_alert("123456789", "Example Log Alert Created by logIoc...happy hunting", "info", "cool-hostname")
+	
+	    if self.get_last_run('batch-cycler') == False:
                         self.update_last_run('batch-cycler')
             
 	    for line in self.query_list:
@@ -209,7 +218,7 @@ class logIoc(object):
                                 thread=threading.Thread(target=self.subprocess_holder_loop, args=(subquery,))
                                 thread.daemon=True
                                 thread.start()
-                                print ("subquery was "+ subquery)
+                                #print ("subquery was "+ subquery)
                 while True:
                         time.sleep(1)
 

@@ -12,7 +12,7 @@ def main(df_hits, lock):
 	writelist=[]
 	file1=open(os.path.abspath('docs/unchecked-hashes'),"r+")
         unchecked_hashes = [line.rstrip('\n').split(',')[0] for line in file1]
-	file2=open(os.path.abspath('docs/checked-hashes'),"r")
+	file2=open(os.path.abspath('docs/checked-hashes'),"r+")
         checked_hashes = [line.rstrip('\n').split(',')[0] for line in file2]
 	
 	lock.acquire()
@@ -22,21 +22,26 @@ def main(df_hits, lock):
 	
 	if len(local_df) != 0:			
 		for index, row in local_df.iterrows():
-			thash = row["_source.event_data.Hashes"]#]item.get('_source', {}).get('event_data', {}).get('Hashes')
-			timagename = row["_source.event_data.Image"]#item.get('_source', {}).get('event_data', {}).get('Image')
+			thash = row["_source.event_data.Hashes"]
+			timagename = row["_source.event_data.Image"]
+			torig_id = row["_id"]
 			tempvar=str(thash).split(',')[0]
 			if tempvar in checked_hashes:
-				print "hash noticed that is already on deck for checking"
-			if tempvar in unchecked_hashes:
-				print "Captured hash that has already been checked with 0 bad results"
+				print "hash noticed that has already been checked"
+			elif tempvar in unchecked_hashes:
+				print "Captured hash that has already been identified for adding to unchecked hashes"
+			elif tempvar in writelist:
+				print "Captured Hash that is already in unchecked hashes writelist"
 			else:
-				writelist.append(str(str(thash)+','+str(timagename)))
+				writelist.append(str(str(thash)+','+str(timagename)+","+str(torig_id)))
 		if len(writelist)!=0:
-			writelist=set(writelist)
+			#writelist=set(writelist)
 			for line in writelist:
 				file1.write("%s\n" % line)
 	file1.close()
-	file2.close()	
+	file2.close()
+
+       
 	return 
 
 
