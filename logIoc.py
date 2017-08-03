@@ -45,15 +45,16 @@ class logIoc(object):
 	def log_alert(self, offending_id, message, severity, host):
 		print ("log alert added to elasticsearch")
 		today=datetime.date.today().strftime('%Y.%m.%d')
-		alert_json={ "timestamp": self.get_utc_now(),"severity":severity, "host":host,"message":message,"offending_id":offending_id}
-                res=self.es.index(index=str("logstash-log-alert-"+today) , doc_type="log-alert",  body=alert_json)
+		alert_json={ "timestamp": self.get_utc_now(), "severity":severity, "host":host,"message":message,"offending_id":offending_id}
+                res=self.es.index(index=str("logstash-logs-alerts-"+today) , doc_type="log-alert", body=alert_json)
                 print(" response: '%s'" % (res))
 		alert_file=open("log-alerts.json","a+")
 		#alert_file.write('{"timestamp": {0}, "beat_name": "log-alert", "message": {1}, "offending_id": {2}}\n'.format(self.get_utc_now(), message, offending_id))
 		#alert_file.write("\n")
 		alert_file.write("{ \"timestamp\":\"" + self.get_utc_now()+"\",\"severity\":\"" + severity + "\",\"host\":\""+host+"\",\"message\":\"" + message + "\",\"offending_id\":\"" + offending_id + "\"}" + "\n")
 		alert_file.close()
-        
+       		del alert_json
+		del today 
 	def check_index_existance(self, index):
                 if self.es.indices.exists(index):
                         return(True)
@@ -145,8 +146,10 @@ class logIoc(object):
                 print "creating it now..."
                 self.create_index(self.logioc_index)
 
-            if self.check_index_existance('logstash-log-alert-2017.08.02')== False:
-                print "management index existance returned false"
+	    today=datetime.date.today().strftime('%Y.%m.%d')
+            
+	    if self.check_index_existance('logstash-logs-alerts-'+today)== False:
+                print "log-alert index existance returned false"
                 self.log_alert("123456789", "Example Log Alert Created by logIoc...happy hunting", "info", "cool-hostname")
 	
 	    if self.get_last_run('batch-cycler') == False:
@@ -158,7 +161,7 @@ class logIoc(object):
                  	self.update_last_timestamp(line, self.get_epoch_now())
 	    try:
                 if self.sliding_window[-1:] != 'h' or 'm' or 's':
-                    print "config check pass....starting window initialization"
+                    print "config check pass....starting window initialization, depending on your window size and log ingestion rate, this could take a while!"
             except:
                 print ("Problem with config, sliding window elapsed time should be appended with  either an h, m, or s for hour, minutes or seconds")
             now=self.get_epoch_now()

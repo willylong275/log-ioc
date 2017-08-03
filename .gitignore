@@ -1,0 +1,4 @@
+*.pyc
+configs/logIoc.ini
+docs/checked-hashes
+docs/unchecked-hashes
