@@ -2,9 +2,11 @@ Welcome to logIoc, this is definitely a work in progress!
 
 Essentially logIoc has one purpose, to provide a simple way to interact with logs in elasticsearch and provide an easy modular way to add "questions of the network" in the form of query scripts.
 
-Of note: this class will build and use a new index in your es instance for management. The name of this index is configured in configs/logIoc.ini
+This was built and currently alerts using log data from windows sysinternals sysmon, future queries will alert from linux, infrastucture, hypervisor and native windows. In the docs dir i added a copy of my sysmon configuration xml file. 
 
-The class build and maintains a moving window of logs in a pandas dataframe. This dataframe is accessible for any query added to the queries dir. If an IOC is identified within log messages the class provides the "log_alert" method to add an alert record to your ES instance.#under construction
+Of note: this class will build and use a new index in your es instance for management and for log-alerts. The name of the management index is configured in configs/logIoc.ini. The log-alert index is currently configured as "logstash-log-alert-YYYY.MM.DD". The log-alert index must be added to your kibana instance.
+
+The class build and maintains a moving window of logs in a pandas dataframe. This dataframe is accessible for any query added to the queries dir. If an IOC is identified within log messages the class provides the "log_alert" method to add an alert record to your ES instance.
 
 The width of the window in time is configured in configs/logIoc.ini as well as the wait period before the window walks to "now".
 
