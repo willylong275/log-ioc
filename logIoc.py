@@ -41,6 +41,18 @@ class logIoc(object):
                 self.es= Elasticsearch([self.es_host], port=self.es_port)
                 self.init_done = False
 		self.lock=threading.Lock()		
+                now=self.get_epoch_now()
+                if self.sliding_window[-1:]== "h":
+                    window_start=now-int(self.sliding_window[:-1])*3600000
+                    self.window_interval=int(self.sliding_window[:-1])*3600000
+                elif self.sliding_window[-1:]== "m":
+                    window_start=now-int(self.sliding_window[:-1])*60000
+                elif self.sliding_window[-1:]== "s":
+                    window_start=now-int(self.sliding_window[:-1])*1000
+                else:
+                    print ("error initializing time window....exiting")
+                    exit()
+
 
 	def log_alert(self, offending_id, message, severity, host):
 		print ("log alert added to elasticsearch")
@@ -158,7 +170,7 @@ class logIoc(object):
 	    for line in self.query_list:
 	
 	   	 if self.get_last_timestamp(line) == False:
-                 	self.update_last_timestamp(line, self.get_epoch_now())
+                 	self.update_last_timestamp(line, self.get_epoch_now()-self.window_interval)
 	    try:
                 if self.sliding_window[-1:] != 'h' or 'm' or 's':
                     print "config check pass....starting window initialization, depending on your window size and log ingestion rate, this could take a while!"
@@ -232,8 +244,12 @@ class logIoc(object):
                     init_time_start=self.get_epoch_now()
                     hits=self.cycler_initialize()
                     global df_hits
-		    self.lock.acquire()
-                    df_hits = pd.DataFrame(hits).sort_values('@timestamp')
+		    self.lock.acquire() 
+		    if len(hits)!=0:
+                    	df_hits = pd.DataFrame(hits).sort_values('@timestamp')
+		    else:
+			print "error getting elasticsearch records during engine inititalization"
+			exit()
 		    print ("Window Initialization ElasticSearch query returned "+str(len(df_hits))+" records for the entire configured window")
 		    self.lock.release()
                     del hits
