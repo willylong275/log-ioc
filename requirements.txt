@@ -1,0 +1,3 @@
+elasticsearch==5.4.0
+flatdict==1.2.0
+pandas==0.21.0
